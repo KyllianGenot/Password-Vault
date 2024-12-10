@@ -1,0 +1,21 @@
+services:
+  server1:
+    build: ./server1
+    ports:
+      - "5000:5000"
+    volumes:
+      - /app/data
+    depends_on:
+      - server2
+  server2:
+    build: ./server2
+    volumes:
+      - /app/keys
+    ports:
+      - "5001:5000"
+  client:
+    build: ./client
+    ports:
+      - "5002:5002"
+    depends_on:
+      - server1
