@@ -1,11 +1,9 @@
 from flask import Flask, render_template, request, redirect, flash, session, get_flashed_messages
 import requests
+import secrets
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"
-
-# Base URL for the API endpoints
-API_URL = "http://server1:5000"
+app.secret_key = secrets.token_urlsafe(32)
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -26,8 +24,7 @@ def signup():
         email = request.form.get("email")
         password = request.form.get("password")
 
-        # Call the API to register the user
-        response = requests.post(f"{API_URL}/signup", json={
+        response = requests.post(f"http://server1:5000/signup", json={
             "username": username,
             "email": email,
             "password": password
@@ -46,11 +43,10 @@ def signup():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        identifier = request.form.get("identifier")  # Username or email
+        identifier = request.form.get("identifier")
         password = request.form.get("password")
 
-        # Call the API to log in the user
-        response = requests.post(f"{API_URL}/login", json={
+        response = requests.post(f"http://server1:5000/login", json={
             "identifier": identifier,
             "password": password
         })

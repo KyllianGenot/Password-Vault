@@ -43,6 +43,44 @@
             outline: none;
             background-color: rgba(255, 255, 255, 0.6);
         }
+        .redirect a {
+            color: #007BFF;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease, text-decoration 0.3s ease;
+        }
+        .redirect a:hover {
+            color: #000e1d;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .entropy-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #ddd;
+            border-radius: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+            display: none;
+        }
+        .entropy-fill {
+            height: 100%;
+            width: 0%;
+            background-color: red;
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+        #entropy-text {
+            display: none;
+            font-size: 0.9em;
+            margin-top: 5px;
+            color: #333;
+        }
+        #password-error {
+            display: none;
+            color: red;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
         button {
             padding: 10px;
             border: none;
@@ -55,54 +93,87 @@
         }
         button:hover {
             transform: scale(1.05);
-            box-shadow: 0 0px 8px rgba(76, 175, 80, 0.5); /* Green shadow effect */
-        }
-        .redirect a {
-            color: #007BFF;
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.3s ease, text-decoration 0.3s ease;
-        }
-        .redirect a:hover {
-            color: #000e1d;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .messages {
-            margin-bottom: 5px;
-        }
-        .messages .success {
-            color: #4CAF50;
-            font-weight: 600;
-        }
-        .messages .danger {
-            color: #FF0000;
-            font-weight: 600;
+            box-shadow: 0 0px 8px rgba(76, 175, 80, 0.5);
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Signup</h1>
-        <!-- Flash Messages -->
-        <div class="messages">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        </div>
-        <form method="POST">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
+        <form method="POST" onsubmit="return validatePassword()">
+            <input type="text" id="username" name="username" placeholder="Username" required>
+            <input type="email" id="email" name="email" placeholder="Email" required>
+            <input type="password" id="password" name="password" placeholder="Password" required oninput="updateEntropyBar()">
+            <div class="entropy-bar" id="entropy-bar">
+                <div class="entropy-fill" id="entropy-fill"></div>
+            </div>
+            <small id="entropy-text"></small>
+            <div id="password-error">Password too weak!</div>
             <button type="submit">Signup</button>
         </form>
         <div class="redirect">
             <p>Already have an account? <a href="/login">Login here</a>.</p>
         </div>
     </div>
+
+    <script>
+        function calculateEntropy(password) {
+            const N = 95; // All printable ASCII characters
+            const L = password.length;
+            return L * Math.log2(N);
+        }
+
+        function updateEntropyBar() {
+            const password = document.getElementById("password").value;
+            const entropy = calculateEntropy(password);
+            const entropyBar = document.getElementById("entropy-bar");
+            const entropyFill = document.getElementById("entropy-fill");
+            const entropyText = document.getElementById("entropy-text");
+            const passwordError = document.getElementById("password-error");
+
+            if (password.length === 0) {
+                // Hide the bar and text if the password is empty
+                entropyBar.style.display = "none";
+                entropyText.style.display = "none";
+                passwordError.style.display = "none";
+                return;
+            }
+
+            // Show the bar and text
+            entropyBar.style.display = "block";
+            entropyText.style.display = "block";
+
+            // Calculate percentage for bar
+            const maxEntropy = 64; // Minimum required
+            const percentage = Math.min((entropy / maxEntropy) * 100, 100);
+            entropyFill.style.width = `${percentage}%`;
+
+            // Update color and text based on strength
+            if (entropy < 32) {
+                entropyFill.style.backgroundColor = "red";
+                entropyText.innerText = "Password strength: Weak";
+            } else if (entropy < 64) {
+                entropyFill.style.backgroundColor = "orange";
+                entropyText.innerText = "Password strength: Medium";
+            } else {
+                entropyFill.style.backgroundColor = "green";
+                entropyText.innerText = "Password strength: Strong";
+            }
+        }
+
+        function validatePassword() {
+            const password = document.getElementById("password").value;
+            const entropy = calculateEntropy(password);
+            const passwordError = document.getElementById("password-error");
+
+            if (entropy < 64) {
+                passwordError.style.display = "block";
+                return false; // Prevent form submission
+            } else {
+                passwordError.style.display = "none";
+                return true; // Allow form submission
+            }
+        }
+    </script>
 </body>
 </html>

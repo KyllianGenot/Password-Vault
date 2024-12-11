@@ -27,7 +27,6 @@ try:
             cleartext_keyset_handle.write(
                 tink.JsonKeysetWriter(keyset_file), keyset_handle
             )
-            print("Generated AES-SIV keyset and saved to file.", flush=True)
     else:
         # Load the existing keyset
         with open(KEYSET_FILE, "r") as keyset_file:
@@ -35,13 +34,9 @@ try:
             keyset_handle = cleartext_keyset_handle.read(
                 tink.JsonKeysetReader(serialized_keyset)
             )
-            print("Loaded AES-SIV keyset from file.", flush=True)
 
-    # Get the DAEAD primitive
     daead_primitive = keyset_handle.primitive(daead.DeterministicAead)
-    print("DAEAD Primitive with AES-SIV initialized successfully.", flush=True)
 except tink.TinkError as e:
-    print(f"Error initializing Tink with AES-SIV: {e}", flush=True)
     raise e
 
 @app.route("/encrypt", methods=["POST"])
@@ -52,14 +47,13 @@ def encrypt():
             return jsonify({"error": "Missing 'hash' in request body"}), 400
 
         hash_to_encrypt = data["hash"].encode("utf-8")
+        
         # Use DAEAD's encrypt_deterministically method
         encrypted_hash = daead_primitive.encrypt_deterministically(hash_to_encrypt, b"")
 
         encrypted_hash_b64 = base64.b64encode(encrypted_hash).decode("utf-8")
-        print(f"Encrypted Hash (Base64): {encrypted_hash_b64}", flush=True)
         return jsonify({"encrypted_hash": encrypted_hash_b64}), 200
     except Exception as e:
-        print(f"Error in /encrypt: {e}", flush=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route("/validate", methods=["POST"])
@@ -67,23 +61,44 @@ def validate():
     try:
         data = request.json
         if "hash" not in data or "encrypted_hash" not in data:
-            return jsonify({"error": "Missing 'hash' or 'encrypted_hash' in request body"}), 400
+            return jsonify({"error": "Missing 'hash' or 'encrypted_hash' in request body"}), 400#
 
         hash_to_validate = data["hash"].encode("utf-8")
         encrypted_hash_b64 = data["encrypted_hash"]
 
-        encrypted_hash = base64.b64decode(encrypted_hash_b64)
-        # Use DAEAD's decrypt_deterministically method
-        decrypted_hash = daead_primitive.decrypt_deterministically(encrypted_hash, b"")
+        # Use DAEAD's encrypt_deterministically method
+        encrypted_hash_validate = daead_primitive.encrypt_deterministically(hash_to_validate, b"")
 
-        print(f"Decrypted Hash: {decrypted_hash.decode('utf-8')}", flush=True)
+        encrypted_hash_validate_b64 = base64.b64encode(encrypted_hash_validate).decode("utf-8")
 
-        valid = hash_to_validate == decrypted_hash
-        print(f"Validation result: {valid}", flush=True)
+        valid = encrypted_hash_validate_b64 == encrypted_hash_b64
         return jsonify({"valid": valid}), 200
     except Exception as e:
-        print(f"Validation error: {e}", flush=True)
         return jsonify({"error": "Decryption failed"}), 400
+
+
+#@app.route("/validate", methods=["POST"])
+#def validate():
+#    try:
+#        data = request.json
+#        if "hash" not in data or "encrypted_hash" not in data:
+#            return jsonify({"error": "Missing 'hash' or 'encrypted_hash' in request body"}), 400#
+#
+#        hash_to_validate = data["hash"].encode("utf-8")
+#        encrypted_hash_b64 = data["encrypted_hash"]
+#
+#        encrypted_hash = base64.b64decode(encrypted_hash_b64)
+#        # Use DAEAD's decrypt_deterministically method
+#        decrypted_hash = daead_primitive.decrypt_deterministically(encrypted_hash, b"")
+#
+#        print(f"Decrypted Hash: {decrypted_hash.decode('utf-8')}", flush=True)
+#
+#        valid = hash_to_validate == decrypted_hash
+#        print(f"Validation result: {valid}", flush=True)
+#        return jsonify({"valid": valid}), 200
+#    except Exception as e:
+#        print(f"Validation error: {e}", flush=True)
+#        return jsonify({"error": "Decryption failed"}), 400
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True) 
