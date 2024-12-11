@@ -31,7 +31,7 @@ def save_storage(data):
 def calculate_entropy(password):
     """Calculate the entropy of the given password."""
     L = len(password)
-    N = 95
+    N = 95 # Number of ASCII characters
     entropy = L * math.log2(N)
     return entropy
 
